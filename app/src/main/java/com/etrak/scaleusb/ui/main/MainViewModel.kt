@@ -24,7 +24,7 @@ class MainViewModel(
 
 ) : ViewModel() {
 
-    private val scaleEvents = scale.eventFlow.shareIn(
+    private val scaleEvents = scale.events.shareIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed()
     )

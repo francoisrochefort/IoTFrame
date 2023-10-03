@@ -51,7 +51,7 @@ class Scale(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val eventFlow by lazy {
+    val events by lazy {
         connectionStatus.flatMapLatest { connectionStatus ->
             when (connectionStatus) {
                 ConnectionStatus.Connected -> {
