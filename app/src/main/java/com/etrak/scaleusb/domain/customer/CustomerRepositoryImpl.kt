@@ -1,4 +1,4 @@
-package com.etrak.scaleusb.domain
+package com.etrak.scaleusb.domain.customer
 
 import com.etrak.scaleusb.dao.CustomerDao
 import com.etrak.scaleusb.data.Customer

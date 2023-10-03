@@ -13,8 +13,6 @@ class ScaleApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
-        Log.d(TAG, "onCreate()")
         appModule = AppModuleImpl(this)
     }
 }
