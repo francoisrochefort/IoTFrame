@@ -26,7 +26,7 @@ class MainViewModel(
 
     private val scaleEvents = scale.events.shareIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed()
+        started = SharingStarted.Eagerly
     )
 
     val customers = customerRepository.listAll()
