@@ -63,10 +63,9 @@ class NormalMode(
     @OptIn(ExperimentalCoroutinesApi::class)
     override val events: Flow<Scale.Event> by lazy {
         callbackFlow {
+
             val listener = object : SerialInputOutputManager.Listener {
-
                 var buffer = ""
-
                 override fun onNewData(data: ByteArray?) {
                     if (data != null) {
 
@@ -106,11 +105,11 @@ class NormalMode(
                         buffer = buffer.drop(gt - lt + 1)
                     }
                 }
-
                 override fun onRunError(e: Exception?) {
                     trySend(Scale.Event.OnError(e))
                 }
             }
+
             manager = SerialInputOutputManager(port, listener)
             manager.start()
             awaitClose {
