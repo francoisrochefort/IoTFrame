@@ -9,8 +9,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlin.Exception
 
-const val TAG = "eco-trak"
-
 class Scale(
 
     private val context: Context
