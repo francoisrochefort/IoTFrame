@@ -1,17 +1,21 @@
-package com.etrak.scaleusb.domain.scale
+package com.etrak.scaleusb.api.mc
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 class DemoMode : Mode {
-    override val events: Flow<Scale.Event> by lazy {
+    override val messages: Flow<Mode.Message> by lazy {
         flow {
-            var angle = 0
+            var param = 0
             while (true) {
-                emit(Scale.Event.OnCabAngle(angle))
+                emit(Mode.Message(
+                        code = "AD38",
+                        params = listOf(param.toString())
+                    )
+                )
                 delay(1000)
-                angle++
+                param++
             }
         }
     }

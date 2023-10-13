@@ -1,4 +1,4 @@
-package com.etrak.scaleusb.domain.scale
+package com.etrak.scaleusb.api.mc
 
 import android.app.PendingIntent
 import android.content.Context
@@ -61,7 +61,7 @@ class NormalMode(
     private lateinit var manager: SerialInputOutputManager
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override val events: Flow<Scale.Event> by lazy {
+    override val messages: Flow<Mode.Message> by lazy {
         callbackFlow {
 
             val listener = object : SerialInputOutputManager.Listener {
@@ -85,28 +85,24 @@ class NormalMode(
                             return
                         }
 
-                        // Extract the command expression from the buffer
+                        // Extract the expression from the buffer
                         val expr = buffer.substring(lt + 1, gt)
 
-                        // Extract the command from the command expression
-                        val cmd = expr.take(4)
+                        // Extract the code from the expression
+                        val code = expr.take(4)
 
-                        // Extract command parameters from the command expression
+                        // Extract parameters from the expression
                         val params = expr.drop(4).split(',')
 
                         // Broadcast the command
-                        when (cmd) {
-                            "AD38" -> {
-                                trySend(Scale.Event.OnCabAngle(params[0].toInt()))
-                            }
-                        }
+                        trySend(Mode.Message(code, params))
 
                         // Remove the command expression from the buffer
                         buffer = buffer.drop(gt - lt + 1)
                     }
                 }
                 override fun onRunError(e: Exception?) {
-                    trySend(Scale.Event.OnError(e))
+
                 }
             }
 

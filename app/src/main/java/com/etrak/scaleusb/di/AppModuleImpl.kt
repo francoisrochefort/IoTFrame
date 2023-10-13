@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.etrak.scaleusb.Db
 import com.etrak.scaleusb.domain.customer.CustomerRepository
 import com.etrak.scaleusb.domain.customer.CustomerRepositoryImpl
+import com.etrak.scaleusb.api.mc.Mc
 import com.etrak.scaleusb.domain.scale.Scale
 
 // https://github.com/philipplackner/ManualDependencyInjection
@@ -26,9 +27,13 @@ class AppModuleImpl(private val context: Context) : AppModule {
         )
     }
 
+    override val mc: Mc by lazy {
+        Mc(context).apply {
+            connect()
+        }
+    }
+
     override val scale: Scale by lazy {
-        val scale = Scale(context)
-        scale.connect()
-        scale
+        Scale(mc)
     }
 }

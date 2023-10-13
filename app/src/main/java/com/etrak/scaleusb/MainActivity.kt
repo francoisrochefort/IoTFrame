@@ -12,8 +12,6 @@ import com.etrak.scaleusb.ScaleApp.Companion.appModule
 import com.etrak.scaleusb.ui.main.MainScreen
 import com.etrak.scaleusb.ui.main.MainViewModel
 import com.etrak.scaleusb.ui.theme.ScaleUsbTheme
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.callbackFlow
 
 class MainActivity : ComponentActivity() {
 
