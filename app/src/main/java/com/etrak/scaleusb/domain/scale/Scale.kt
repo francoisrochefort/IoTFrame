@@ -16,12 +16,12 @@ class Scale(
     }
 
     val events: Flow<Event> by lazy {
-        mc.messages.map {
-            when (it.code) {
+        mc.messages.map { message ->
+            when (message.code) {
 
-                "AD38" -> Event.OnCabAngle(it.params[0].toInt())
+                "AD38" -> Event.OnCabAngle(message.params[0].toInt())
 
-                else -> Event.OnError(it)
+                else -> Event.OnError(message)
             }
         }
     }
