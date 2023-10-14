@@ -4,7 +4,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class DemoMode : Mode {
+class Software : Mode {
     override val messages: Flow<Mode.Message> by lazy {
         flow {
             var param = 0
@@ -20,7 +20,7 @@ class DemoMode : Mode {
         }
     }
 
-    override fun print(message: String) {
+    override fun send(msg: Mode.Message) {
         TODO("Not yet implemented")
     }
 }

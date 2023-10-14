@@ -5,11 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbManager
-import android.util.Log
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
-
-const val TAG = "e-trak mc"
 
 class Mc(
 
@@ -23,19 +20,18 @@ class Mc(
 
     inner class Receiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-
-            Log.d(TAG, "Mc::onReceive")
-
             when (intent.action) {
                 UsbManager.ACTION_USB_DEVICE_ATTACHED ->
-                    connectionStatus.value = ConnectionStatus.Connected
+                    _connectionStatus.value = ConnectionStatus.Connected
                 UsbManager.ACTION_USB_DEVICE_DETACHED ->
-                    connectionStatus.value = ConnectionStatus.Disconnected
+                    _connectionStatus.value = ConnectionStatus.Disconnected
             }
         }
     }
 
-    private val connectionStatus = MutableStateFlow(ConnectionStatus.Disconnected)
+    private val _connectionStatus = MutableStateFlow(ConnectionStatus.Disconnected)
+    val connectionStatus = _connectionStatus.asStateFlow()
+
     private lateinit var mode: Mode
 
     fun connect() {
@@ -49,14 +45,16 @@ class Mc(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val messages by lazy {
-        connectionStatus.flatMapLatest { connectionStatus ->
+        _connectionStatus.flatMapLatest { connectionStatus ->
             mode = when (connectionStatus) {
-                ConnectionStatus.Connected -> NormalMode(context)
-                ConnectionStatus.Disconnected -> DemoMode()
+                ConnectionStatus.Connected -> Hardware(context)
+                ConnectionStatus.Disconnected -> Software()
             }
             mode.messages
         }
     }
+
+    fun send(msg: Mode.Message) = mode.send(msg)
 }
 
 

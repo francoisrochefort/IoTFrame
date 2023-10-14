@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ScaleUsb</string>
+    <string name="content_title">E-Trak MC service</string>
+    <string name="content_text">Loaded</string>
 </resources>

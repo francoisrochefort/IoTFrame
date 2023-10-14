@@ -7,6 +7,6 @@ interface Mode {
     data class Message(val code: String, val params: List<String>)
 
     val messages: Flow<Message>
-    fun print(message: String)
+    fun send(msg: Message)
 }
 
