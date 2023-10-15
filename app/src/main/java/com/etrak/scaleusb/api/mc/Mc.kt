@@ -7,7 +7,6 @@ import android.content.IntentFilter
 import com.etrak.scaleusb.api.mc.McService.Companion.EXTRA_MESSAGE_CODE
 import com.etrak.scaleusb.api.mc.McService.Companion.EXTRA_MESSAGE_PARAMS
 import com.etrak.scaleusb.api.mc.McService.Companion.ON_MESSAGE
-import com.etrak.scaleusb.domain.scale.SoftwareEmulator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*

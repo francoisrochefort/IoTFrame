@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 abstract class McService(
 
-    private val emulator: Device
+    private val emulator: Class<out Device>
 
 ) : LifecycleService() {
 
@@ -68,7 +68,7 @@ abstract class McService(
     val messages = connectionStatus.flatMapLatest { connectionStatus ->
         device = when (connectionStatus) {
             ConnectionStatus.Connected -> HardwareDevice(applicationContext)
-            ConnectionStatus.Disconnected -> emulator
+            ConnectionStatus.Disconnected -> emulator.newInstance()
         }
         device.messages
     }
