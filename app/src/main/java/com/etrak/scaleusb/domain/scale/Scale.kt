@@ -1,7 +1,7 @@
 package com.etrak.scaleusb.domain.scale
 
 import com.etrak.scaleusb.api.mc.Mc
-import com.etrak.scaleusb.api.mc.Mode
+import com.etrak.scaleusb.api.mc.Device
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -12,7 +12,7 @@ class Scale(
 ) {
     sealed class Event {
         data class OnCabAngle(val angle: Int) : Event()
-        data class OnError(val msg: Mode.Message) : Event()
+        data class OnUnknown(val msg: Device.Message) : Event()
     }
 
     val events: Flow<Event> by lazy {
@@ -21,7 +21,7 @@ class Scale(
 
                 "AD38" -> Event.OnCabAngle(message.params[0].toInt())
 
-                else -> Event.OnError(message)
+                else -> Event.OnUnknown(message)
             }
         }
     }

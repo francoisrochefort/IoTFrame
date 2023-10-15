@@ -1,15 +1,17 @@
-package com.etrak.scaleusb.api.mc
+package com.etrak.scaleusb.domain.scale
 
+import com.etrak.scaleusb.api.mc.Device
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class Software : Mode {
-    override val messages: Flow<Mode.Message> by lazy {
+class SoftwareEmulator : Device {
+    override val messages: Flow<Device.Message> by lazy {
         flow {
             var param = 0
             while (true) {
-                emit(Mode.Message(
+                emit(
+                    Device.Message(
                         code = "AD38",
                         params = listOf(param.toString())
                     )
@@ -20,7 +22,11 @@ class Software : Mode {
         }
     }
 
-    override fun send(msg: Mode.Message) {
+    override fun send(msg: Device.Message) {
+        TODO("Not yet implemented")
+    }
+
+    override fun connect() {
         TODO("Not yet implemented")
     }
 }

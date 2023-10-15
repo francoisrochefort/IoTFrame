@@ -5,47 +5,75 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import android.app.PendingIntent
-import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
 import android.hardware.usb.UsbManager
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
 import com.etrak.scaleusb.R
-import com.hoho.android.usbserial.driver.UsbSerialPort
-import com.hoho.android.usbserial.driver.UsbSerialProber
-import com.hoho.android.usbserial.util.SerialInputOutputManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
-class McService : Service() {
+abstract class McService(
 
-    /**********************************************************************************************
-     * Constants
-     *********************************************************************************************/
-    enum class Action {
-        Start,
-        Print,
-        Stop
-    }
+    private val emulator: Device
+
+) : LifecycleService() {
 
     companion object {
+
+        // Intents
         const val ON_MESSAGE = "com.example.ON_MESSAGE"
         const val EXTRA_MESSAGE_CODE = "com.example.EXTRA_MESSAGE_CODE"
         const val EXTRA_MESSAGE_PARAMS = "com.example.EXTRA_MESSAGE_PARAMS"
+
         const val CHANNEL_ID = "connection_status"
         const val NOTIFICATION_ID = 1
     }
 
+    // Intent actions
+    enum class Action {
+        Start,
+        Send,
+        Stop
+    }
+
+    enum class ConnectionStatus {
+        Connected,
+        Disconnected
+    }
+
     class NoUsbDriverAvailableException : Exception()
 
-    /**********************************************************************************************
-     * Variables
-     *********************************************************************************************/
-    private lateinit var usbSerialPort: UsbSerialPort
-    private lateinit var serialInputOutputManager: SerialInputOutputManager
+    // When a device is attached or detached then change the connection status
+    inner class Receiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                UsbManager.ACTION_USB_DEVICE_ATTACHED ->
+                    connectionStatus.value = ConnectionStatus.Connected
+                UsbManager.ACTION_USB_DEVICE_DETACHED ->
+                    connectionStatus.value = ConnectionStatus.Disconnected
+            }
+        }
+    }
 
-    /**********************************************************************************************
-     * Helpers
-     *********************************************************************************************/
+    private val receiver = Receiver()
+    private val connectionStatus = MutableStateFlow(ConnectionStatus.Disconnected)
+    private lateinit var device: Device
+
+    // When the connection status changes then switch between flows
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val messages = connectionStatus.flatMapLatest { connectionStatus ->
+        device = when (connectionStatus) {
+            ConnectionStatus.Connected -> HardwareDevice(applicationContext)
+            ConnectionStatus.Disconnected -> emulator
+        }
+        device.messages
+    }
+    .shareIn(lifecycleScope, SharingStarted.Eagerly)
+
     private val builder: NotificationCompat.Builder by lazy {
         NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.usb)
@@ -59,89 +87,26 @@ class McService : Service() {
         manager.notify(NOTIFICATION_ID, builder.build())
     }
 
-    private val listener = object : SerialInputOutputManager.Listener {
-        var buffer = ""
-        override fun onNewData(data: ByteArray?) {
-            if (data != null) {
-
-                // Append new data to the buffer
-                buffer += String(data)
-
-                // Find the index of the opening delimiter
-                val lt = buffer.indexOf('<')
-                if (lt == -1) {
-                    buffer = ""
-                    return
-                }
-
-                // Find the index of the closing delimiter
-                val gt = buffer.indexOf('>', lt + 1)
-                if (gt == -1) {
-                    return
-                }
-
-                // Extract the expression from the buffer
-                val expr = buffer.substring(lt + 1, gt)
-
-                // Extract the code from the expression
-                val code = expr.take(4)
-
-                // Extract parameters from the expression
-                val params = expr.drop(4).split(',').toTypedArray()
-
-                // Broadcast the command
-                sendBroadcast(
-                    Intent(ON_MESSAGE).apply {
-                        putExtra(EXTRA_MESSAGE_CODE, code)
-                        putExtra(EXTRA_MESSAGE_PARAMS, params)
-                    }
-                )
-
-                // Remove the command expression from the buffer
-                buffer = buffer.drop(gt - lt + 1)
-            }
-        }
-        override fun onRunError(e: Exception?) {
-        }
-    }
-
-    /**********************************************************************************************
-     * Handlers
-     *********************************************************************************************/
     private fun onStart() {
 
-        // Find all available drivers from attached devices.
-        val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager?
-        val availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(usbManager)
-        if (availableDrivers.isEmpty()) {
-            throw NoUsbDriverAvailableException()
-        }
-
-        // Open a connection to the first available driver.
-        val usbSerialDriver = availableDrivers.first()
-        val usbDeviceConnection = usbManager!!.openDevice(usbSerialDriver.device)
-
-        // Request permission
-        if (usbDeviceConnection == null) {
-            while (!usbManager.hasPermission(usbSerialDriver.device)) {
-                usbManager.requestPermission(
-                    usbSerialDriver.device,
-                    PendingIntent.getBroadcast(
-                        this,
-                        0,
-                        Intent("com.eco_trak.balance.USB_PERMISSION"),
-                        PendingIntent.FLAG_IMMUTABLE
-                    )
+        // Collect message from devices and broadcast them
+        lifecycleScope.launch {
+            messages.collect { msg ->
+                sendBroadcast(
+                    Intent(ON_MESSAGE).apply {
+                        putExtra(EXTRA_MESSAGE_CODE, msg.code)
+                        putExtra(EXTRA_MESSAGE_PARAMS, msg.params.toTypedArray())
+                    }
                 )
-                Thread.sleep(5000)
             }
         }
-        usbSerialPort = usbSerialDriver.ports.first() // Most devices have just one port (port 0)
-        usbSerialPort.open(usbDeviceConnection)
-        usbSerialPort.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
 
-        serialInputOutputManager = SerialInputOutputManager(usbSerialPort, listener)
-        serialInputOutputManager.start()
+        // Register the receiver
+        IntentFilter().apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            registerReceiver(receiver, this)
+        }
 
         // Create the notification channel
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -158,36 +123,29 @@ class McService : Service() {
         startForeground(1, builder.build())
     }
 
-    private fun onPrint(code: String, params: Array<String>) {
-        val src = "<$code${params.joinToString(separator = ",")}>"
-        usbSerialPort.write(src.toByteArray(), 100)
+    private fun onPrint(msg: Device.Message) {
+        device.send(msg)
     }
 
     private fun onStop() {
+        unregisterReceiver(receiver)
         stopForeground(true)
         stopSelf()
     }
 
-    /**********************************************************************************************
-     * Service onStartCommand function
-     *********************************************************************************************/
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
+        // Dispatch the action to its handler
         when (intent?.action) {
             Action.Start.name -> onStart()
-            Action.Print.name -> onPrint(
-                intent.getStringExtra(EXTRA_MESSAGE_CODE)!!,
-                intent.getStringArrayExtra(EXTRA_MESSAGE_PARAMS)!!
+            Action.Send.name -> onPrint(
+                Device.Message(
+                    intent.getStringExtra(EXTRA_MESSAGE_CODE)!!,
+                    intent.getStringArrayExtra(EXTRA_MESSAGE_PARAMS)!!.toList()
+                )
             )
             Action.Stop.name -> onStop()
         }
         return super.onStartCommand(intent, flags, startId)
-    }
-
-    /**********************************************************************************************
-     * Service onBind function
-     *********************************************************************************************/
-    override fun onBind(intent: Intent): IBinder? {
-        return null
     }
 }

@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.savedstate.SavedStateRegistryOwner
 import com.etrak.scaleusb.domain.customer.CustomerRepository
-import com.etrak.scaleusb.api.mc.Mc
 import com.etrak.scaleusb.domain.scale.Scale
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collect

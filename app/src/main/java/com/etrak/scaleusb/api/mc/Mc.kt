@@ -4,62 +4,70 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.hardware.usb.UsbManager
+import com.etrak.scaleusb.api.mc.McService.Companion.EXTRA_MESSAGE_CODE
+import com.etrak.scaleusb.api.mc.McService.Companion.EXTRA_MESSAGE_PARAMS
+import com.etrak.scaleusb.api.mc.McService.Companion.ON_MESSAGE
+import com.etrak.scaleusb.domain.scale.SoftwareEmulator
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 
 class Mc(
 
-    private val context: Context
+    private val context: Context,
+    private val service: Class<*>?
 
 ) {
-    enum class ConnectionStatus {
-        Connected,
-        Disconnected
-    }
+    fun send(msg: Device.Message) {
 
-    inner class Receiver : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                UsbManager.ACTION_USB_DEVICE_ATTACHED ->
-                    _connectionStatus.value = ConnectionStatus.Connected
-                UsbManager.ACTION_USB_DEVICE_DETACHED ->
-                    _connectionStatus.value = ConnectionStatus.Disconnected
-            }
-        }
-    }
-
-    private val _connectionStatus = MutableStateFlow(ConnectionStatus.Disconnected)
-    val connectionStatus = _connectionStatus.asStateFlow()
-
-    private lateinit var mode: Mode
-
-    fun connect() {
-        IntentFilter().apply {
-            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-            val receiver = Receiver()
-            context.registerReceiver(receiver, this)
+        // Send the message to the service
+        Intent(context, service).apply {
+            action = McService.Action.Send.name
+            putExtra(EXTRA_MESSAGE_CODE, msg.code)
+            putExtra(EXTRA_MESSAGE_PARAMS, msg.params.toTypedArray())
+            context.startService(this)
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val messages by lazy {
-        _connectionStatus.flatMapLatest { connectionStatus ->
-            mode = when (connectionStatus) {
-                ConnectionStatus.Connected -> Hardware(context)
-                ConnectionStatus.Disconnected -> Software()
+    val messages = callbackFlow {
+
+        // Receiver
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+
+                // Send message
+                trySend(
+                    Device.Message(
+                        code = intent.getStringExtra(EXTRA_MESSAGE_CODE)!!,
+                        params = intent.getStringArrayExtra(EXTRA_MESSAGE_PARAMS)!!.toList()
+                    )
+                )
             }
-            mode.messages
+        }
+
+        // Register the receiver
+        IntentFilter().apply {
+            addAction(ON_MESSAGE)
+            context.registerReceiver(receiver, this)
+        }
+
+        awaitClose {
+
+            // Unregister the receiver
+            context.unregisterReceiver(receiver)
         }
     }
 
-    fun send(msg: Mode.Message) = mode.send(msg)
+    fun start() {
+
+        // Start the service
+        Intent(context, service).apply {
+            action = McService.Action.Start.name
+            context.startService(this)
+        }
+    }
 }
-
-
-
-
 
 
 

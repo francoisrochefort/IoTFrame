@@ -19,7 +19,7 @@
         android:theme="@style/Theme.ScaleUsb"
         tools:targetApi="31">
 
-        <service android:name=".api.mc.McService"/>
+        <service android:name=".domain.scale.ScaleService"/>
 
         <activity
             android:name=".MainActivity"

@@ -7,6 +7,7 @@ import com.etrak.scaleusb.domain.customer.CustomerRepository
 import com.etrak.scaleusb.domain.customer.CustomerRepositoryImpl
 import com.etrak.scaleusb.api.mc.Mc
 import com.etrak.scaleusb.domain.scale.Scale
+import com.etrak.scaleusb.domain.scale.ScaleService
 
 // https://github.com/philipplackner/ManualDependencyInjection
 // https://www.youtube.com/watch?v=eX-y0IEHJjM&t=647s
@@ -28,8 +29,11 @@ class AppModuleImpl(private val context: Context) : AppModule {
     }
 
     override val mc: Mc by lazy {
-        Mc(context).apply {
-            connect()
+        Mc(
+            context = context,
+            service = ScaleService::class.java
+        ).apply {
+            start()
         }
     }
 
