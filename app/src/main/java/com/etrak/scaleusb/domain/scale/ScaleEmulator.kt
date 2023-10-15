@@ -5,7 +5,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class DeviceEmulator : Device {
+class ScaleEmulator : Device {
     override val messages: Flow<Device.Message> by lazy {
         flow {
             var param = 0
